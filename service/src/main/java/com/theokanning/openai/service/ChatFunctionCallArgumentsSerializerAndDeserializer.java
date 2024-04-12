@@ -70,9 +70,28 @@ public class ChatFunctionCallArgumentsSerializerAndDeserializer {
 
         @Override
         public JsonNode deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            JsonToken currentToken = p.getCurrentToken();
-            JsonNodeHandler handler = HANDLERS.getOrDefault(currentToken, new DefaultNodeHandler());
-            return handler.handle(p, ctxt);
+            String json = p.getValueAsString();
+            if (json == null || p.currentToken() == JsonToken.VALUE_NULL) {
+                return null;
+            }
+
+            // encode to valid JSON escape otherwise we will lose quotes
+            json = MAPPER.writeValueAsString(json);
+
+            try {
+                JsonNode node = null;
+                try {
+                    node = MAPPER.readTree(json);
+                } catch (JsonParseException ignored) {
+                }
+                if (node == null || node.getNodeType() == JsonNodeType.MISSING) {
+                    node = MAPPER.readTree(p);
+                }
+                return node;
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                return null;
+            }
         }
     }
 
